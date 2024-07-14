@@ -79,7 +79,7 @@ def gradient_descent(X, y, predictions, weights, bias, learning_rate, minibatch_
     bias -= learning_rate * bias_gradient
     return weights, bias
 
-def stochastic_newton(X,y,predictions, weights, bias, learning_rate, minibatch_size, hessian_function, gradient_function):
+def stochastic_newton(X,y,predictions, weights, bias, learning_rate, minibatch_size, hessian_function, gradient_function, Loss_function):
     # choose batch
     if minibatch_size >= X.shape[0]:
         X_batch = X
@@ -92,7 +92,18 @@ def stochastic_newton(X,y,predictions, weights, bias, learning_rate, minibatch_s
     # calculate xk+1
     Hk = hessian_function(weights, X_batch, y_batch)
     gk = gradient_function(weights, X_batch, y_batch)
-    weights -= learning_rate*np.dot(np.linalg.inv(Hk), gk)
+
+
+    #update only if successful
+    old_prediction = sigmoid(np.dot(X, weights))
+    old_loss = Loss_function(y, old_prediction)
+    new_weights = weights - learning_rate*np.dot(np.linalg.inv(Hk), gk)
+    new_prediction = sigmoid(np.dot(X, new_weights))
+    new_loss = Loss_function(y, new_prediction)
+
+    if old_loss>new_loss:
+        weights = new_weights
+
     return weights, 0
 
 def logistic_loss_hessian( w, X, Y, alpha=1e-3):
@@ -117,7 +128,7 @@ def logistic_loss_gradient(w, X, Y, alpha=1e-3):
 
 def optimization(X, y, optimization_method, Loss_function, learning_rate=0.01, epochs=1000, tolerance=1e-6):
     m, n = X.shape
-    weights = np.ones((n, 1))*0.5
+    weights = np.ones((n, 1))*0.001
     bias = np.zeros((1, 1))
     accuracy_list = []
     loss_list = []
@@ -135,8 +146,8 @@ def optimization(X, y, optimization_method, Loss_function, learning_rate=0.01, e
         loss = Loss_function(y, predictions)
         loss_list.append(loss)
         # Do a optimization step with given method
-        weights, bias = optimization_method(X, y, predictions, weights, bias, learning_rate, minibatch_size = 128,
-                                             hessian_function = logistic_loss_hessian, gradient_function = logistic_loss_gradient)
+        weights, bias = optimization_method(X, y, predictions, weights, bias, learning_rate, minibatch_size = 32,
+                                             hessian_function = logistic_loss_hessian, gradient_function = logistic_loss_gradient, Loss_function = Loss_function)
         
         # Compute accuracy
         accuracy = compute_accuracy(X, y, weights, bias)
@@ -162,8 +173,8 @@ def compute_accuracy(X, y, weights, bias):
 # Main function
 def main():
     X_train, X_test, y_train, y_test = load_a9a()
-    learning_rate = 0.25
-    epochs = 1000
+    learning_rate = 1
+    epochs = 3000
     optimization_method = stochastic_newton
 
 
@@ -184,7 +195,7 @@ def main():
     plt.plot(accuracy_list)
     plt.xlabel('Iterations')
     plt.ylabel('Accuracy')
-    plt.title(f'Accuracy vs Iterations for {optimization_method}')
+    plt.title(f'Accuracy vs Iterations for {optimization_method.__name__}')
     plt.savefig('accuracy_plot.png')  # Save plot as PNG file
     plt.close()  # Close the plot window
 
