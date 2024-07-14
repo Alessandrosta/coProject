@@ -6,6 +6,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
 import random
 import time
+import os
 
 # Dataset function
 def load_mnist_libsvm():
@@ -37,8 +38,13 @@ def load_mnist_libsvm():
     return X_train, X_test, y_train, y_test
 
 def load_a9a():
-    X_train, y_train = load_svmlight_file('a9a.txt')
-    X_test, y_test = load_svmlight_file('a9a.t')
+    current_file_path = os.path.realpath(__file__)
+    current_file_directory = os.path.dirname(current_file_path)
+
+    X_train, y_train = load_svmlight_file(current_file_directory+'\\a9a.txt')
+    X_test, y_test = load_svmlight_file(current_file_directory+'\\a9a.t')
+    #X_train, y_train = load_svmlight_file('a9a.txt')
+    #X_test, y_test = load_svmlight_file('a9a.t')
 
     X_train = X_train.toarray()
     y_train= [0 if e == -1 else e for e in y_train]
@@ -93,7 +99,7 @@ def stochastic_newton(X,y,predictions, weights, bias, learning_rate, minibatch_s
     Hk = hessian_function(weights, X_batch, y_batch)
     gk = gradient_function(weights, X_batch, y_batch)
 
-
+    loss = 1000
     #update only if successful
     old_prediction = sigmoid(np.dot(X, weights))
     old_loss = Loss_function(y, old_prediction)
@@ -103,8 +109,74 @@ def stochastic_newton(X,y,predictions, weights, bias, learning_rate, minibatch_s
 
     if old_loss>new_loss:
         weights = new_weights
+        loss = new_loss
+    else:
+        loss = old_loss
 
-    return weights, 0
+
+    return weights, 0, loss
+
+
+
+
+
+def stochastic_cubic_newton(X,y,predictions, weights, bias, learning_rate, minibatch_size, hessian_function, gradient_function, Loss_function, M):
+    
+    
+    if minibatch_size >= X.shape[0]:
+        X_batch = X
+        y_batch = y
+    else:
+        batch =  np.random.choice(X.shape[0], minibatch_size, replace=False)
+        X_batch = X[batch]
+        y_batch = y[batch]    
+
+    # calculate xk+1
+    Hk = hessian_function(weights, X_batch, y_batch)
+    gk = gradient_function(weights, X_batch, y_batch)
+    
+
+    loss = 1000
+    # update only if successful
+    old_prediction = sigmoid(np.dot(X, weights))
+    old_loss = Loss_function(y, old_prediction)
+    new_weights = weights + cubic_regularization_subproblem_gd(gk, Hk, M, learning_rate=0.1, iterations=100)
+    new_prediction = sigmoid(np.dot(X, new_weights))
+    new_loss = Loss_function(y, new_prediction)
+    #weights += cubic_regularization_subproblem_gd(gk, Hk, M, learning_rate=0.1, iterations=100)
+    #pred = sigmoid(np.dot(X, weights))
+    #loss = Loss_function(y, pred)
+
+
+    if old_loss>new_loss:
+        weights = new_weights
+        loss = new_loss
+    else:
+        loss = old_loss
+#
+    return weights, bias, loss
+
+
+
+def cubic_regularization_subproblem_gd(g, H, M, learning_rate, iterations):
+    w = np.zeros_like(g)
+
+    for _ in range(iterations):
+        grad_sub = cubic_gradient(g, H, w, 1e-3, M)
+        w -= learning_rate*grad_sub
+
+    return w
+
+
+
+
+def cubic_gradient(g, H, w, alpha, M):
+
+    grad = g + H @ w + (M/2)*np.linalg.norm(w)*w
+
+    return grad
+
+
 
 def logistic_loss_hessian( w, X, Y, alpha=1e-3):
     n = X.shape[0]
@@ -126,9 +198,13 @@ def logistic_loss_gradient(w, X, Y, alpha=1e-3):
     return  grad
 
 
+
+
+
+
 def optimization(X, y, optimization_method, Loss_function, learning_rate=0.01, epochs=1000, tolerance=1e-6):
     m, n = X.shape
-    weights = np.ones((n, 1))*0.001
+    weights = np.ones((n, 1))*0.5
     bias = np.zeros((1, 1))
     accuracy_list = []
     loss_list = []
@@ -146,8 +222,8 @@ def optimization(X, y, optimization_method, Loss_function, learning_rate=0.01, e
         loss = Loss_function(y, predictions)
         loss_list.append(loss)
         # Do a optimization step with given method
-        weights, bias = optimization_method(X, y, predictions, weights, bias, learning_rate, minibatch_size = 32,
-                                             hessian_function = logistic_loss_hessian, gradient_function = logistic_loss_gradient, Loss_function = Loss_function)
+        weights, bias, loss = optimization_method(X, y, predictions, weights, bias, learning_rate, minibatch_size = 32,
+                                             hessian_function = logistic_loss_hessian, gradient_function = logistic_loss_gradient, Loss_function = Loss_function, M=0.02)
         
         # Compute accuracy
         accuracy = compute_accuracy(X, y, weights, bias)
@@ -174,8 +250,9 @@ def compute_accuracy(X, y, weights, bias):
 def main():
     X_train, X_test, y_train, y_test = load_a9a()
     learning_rate = 1
-    epochs = 3000
-    optimization_method = stochastic_newton
+    epochs = 1000
+    #optimization_method = stochastic_newton
+    optimization_method = stochastic_cubic_newton
 
 
     print(f'size Xtrain: {X_train.shape}')
