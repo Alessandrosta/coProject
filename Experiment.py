@@ -59,10 +59,65 @@ def load_a9a():
 def cross_entropy_loss(y, f_x):
     return -np.mean(y * np.log(f_x))
 
-def binary_cross_entropy_loss(y,f_x):
+
+# logistic loss function
+def binary_cross_entropy_loss(w, X, y, lambd, alpha):
+
     n=y.shape[0]
-    result = -(np.dot(y , np.log(f_x)) + np.dot(1-y , np.log(1-f_x)))/n
+    z = np.dot(X,w)
+    prediction = sigmoid(z)
+    result = -(np.dot(y , np.log(prediction)) + np.dot(1-y , np.log(1-prediction)))/n
+
     return result              
+
+
+def logistic_loss_gradient(w, X, Y, delta=1e-3):
+
+    n = X.shape[0]
+    d = X.shape[1]
+    z = X.dot(w)  
+    h = sigmoid(z)
+    grad= X.T.dot(h-Y[:, np.newaxis])/n
+    grad = grad + delta * w
+
+    return  grad
+
+def logistic_loss_hessian( w, X, Y, delta=1e-3):
+
+    n = X.shape[0]
+    d = X.shape[1]
+    z= X.dot(w)
+    q=sigmoid(z)
+    h= np.array(q*(1-sigmoid(z)))
+    H = np.dot(np.transpose(X),h* X) / n
+    H = H + delta * np.eye(d, d)
+
+    return H
+
+
+# Regularized loss function
+def regularized_loss(w, X, y, lambd, alpha):
+
+    r = lambd * np.sum([alpha * wi**2 / (1 + alpha * wi**2) for wi in w])     
+    reg_loss = binary_cross_entropy_loss(w, X, y, lambd, alpha) + r
+    return reg_loss
+
+def reg_loss_gradient(w, X, y, lambd, alpha, delta=1e-3):
+
+    grad_r = 2 * lambd * alpha * w / (alpha * w**2 + 1)**2
+    grad = logistic_loss_gradient(w, X, y, delta)+grad_r
+
+    return grad
+
+def reg_loss_hessian(w, X, y, lambd, alpha, delta=1e-3):
+
+    diag = -4 * lambd * alpha * w * (alpha * w**2 - 1) / (alpha * w**2 + 1)**3
+    reg_hessian = logistic_loss_hessian(w, X, y, delta) + np.diag(diag)
+    
+    return reg_hessian
+
+
+
 
 # Sigmoid function
 def softmax(z):
@@ -73,19 +128,19 @@ def softmax(z):
 def sigmoid(z):
     return 1/(1+np.exp(-z))
 
-def gradient_descent(X, y, predictions, weights, bias, learning_rate, minibatch_size, hessian_function, gradient_function):
-    m,_ = X.shape
-    # Gradient computation
-    error = predictions.T - y
-    weight_gradient = np.dot(X.T, error.T) / m
-    bias_gradient = np.mean(error)
-    
-    # Update weights and bias
-    weights -= learning_rate * weight_gradient
-    bias -= learning_rate * bias_gradient
-    return weights, bias
+#def gradient_descent(X, y, predictions, weights, bias, learning_rate, minibatch_size, hessian_function, gradient_function):
+#    m,_ = X.shape
+#    # Gradient computation
+#    error = predictions.T - y
+#    weight_gradient = np.dot(X.T, error.T) / m
+#    bias_gradient = np.mean(error)
+#    
+#    # Update weights and bias
+#    weights -= learning_rate * weight_gradient
+#    bias -= learning_rate * bias_gradient
+#    return weights, bias
 
-def stochastic_newton(X,y,predictions, weights, bias, learning_rate, minibatch_size, hessian_function, gradient_function, Loss_function):
+def stochastic_newton(X,y, weights, learning_rate, minibatch_size, hessian_function, gradient_function, Loss_function, M, lambd, alpha):
     # choose batch
     if minibatch_size >= X.shape[0]:
         X_batch = X
@@ -101,11 +156,9 @@ def stochastic_newton(X,y,predictions, weights, bias, learning_rate, minibatch_s
 
     loss = 1000
     #update only if successful
-    old_prediction = sigmoid(np.dot(X, weights))
-    old_loss = Loss_function(y, old_prediction)
+    old_loss = Loss_function(weights, X, y, lambd, alpha)
     new_weights = weights - learning_rate*np.dot(np.linalg.inv(Hk), gk)
-    new_prediction = sigmoid(np.dot(X, new_weights))
-    new_loss = Loss_function(y, new_prediction)
+    new_loss = Loss_function(new_weights, X, y, lambd, alpha)
 
     if old_loss>new_loss:
         weights = new_weights
@@ -114,13 +167,13 @@ def stochastic_newton(X,y,predictions, weights, bias, learning_rate, minibatch_s
         loss = old_loss
 
 
-    return weights, 0, loss
+    return weights, loss
 
 
 
 
 
-def stochastic_cubic_newton(X,y,predictions, weights, bias, learning_rate, minibatch_size, hessian_function, gradient_function, Loss_function, M):
+def stochastic_cubic_newton(X,y, weights, learning_rate, minibatch_size, hessian_function, gradient_function, Loss_function, M, lambd, alpha):
     
     
     if minibatch_size >= X.shape[0]:
@@ -139,10 +192,10 @@ def stochastic_cubic_newton(X,y,predictions, weights, bias, learning_rate, minib
     loss = 1000
     # update only if successful
     old_prediction = sigmoid(np.dot(X, weights))
-    old_loss = Loss_function(y, old_prediction)
+    old_loss = Loss_function(weights, X, y, lambd, alpha)
     new_weights = weights + cubic_regularization_subproblem_gd(gk, Hk, M, learning_rate=0.1, iterations=100)
     new_prediction = sigmoid(np.dot(X, new_weights))
-    new_loss = Loss_function(y, new_prediction)
+    new_loss = Loss_function(new_weights, X, y, lambd, alpha)
     #weights += cubic_regularization_subproblem_gd(gk, Hk, M, learning_rate=0.1, iterations=100)
     #pred = sigmoid(np.dot(X, weights))
     #loss = Loss_function(y, pred)
@@ -154,7 +207,7 @@ def stochastic_cubic_newton(X,y,predictions, weights, bias, learning_rate, minib
     else:
         loss = old_loss
 #
-    return weights, bias, loss
+    return weights, loss
 
 
 
@@ -178,66 +231,47 @@ def cubic_gradient(g, H, w, alpha, M):
 
 
 
-def logistic_loss_hessian( w, X, Y, alpha=1e-3):
-    n = X.shape[0]
-    d = X.shape[1]
-    z= X.dot(w)
-    q=sigmoid(z)
-    h= np.array(q*(1-sigmoid(z)))
-    H = np.dot(np.transpose(X),h* X) / n
-    H = H + alpha * np.eye(d, d)
-    return H
-
-def logistic_loss_gradient(w, X, Y, alpha=1e-3):
-    n = X.shape[0]
-    d = X.shape[1]
-    z = X.dot(w)  
-    h = sigmoid(z)
-    grad= X.T.dot(h-Y[:, np.newaxis])/n
-    grad = grad + alpha * w
-    return  grad
-
-
 
 
 
 
 def optimization(X, y, optimization_method, Loss_function, learning_rate=0.01, epochs=1000, tolerance=1e-6):
     m, n = X.shape
-    weights = np.ones((n, 1))*0.5
-    bias = np.zeros((1, 1))
+    weights = np.ones((n, 1))*0.1
+    #bias = np.zeros((1, 1))
     accuracy_list = []
     loss_list = []
     # Compute accuracy
-    accuracy = compute_accuracy(X, y, weights, bias)
+    accuracy = compute_accuracy(X, y, weights)
     accuracy_list.append(accuracy)
     print(f'Accuracy epoch 0: {accuracy}')
     for epoch in range(epochs):
         # Linear combination
-        linear_output = np.dot(X, weights) + bias
+        #linear_output = np.dot(X, weights)
         # Activation function
-        predictions = sigmoid(linear_output)
+        #predictions = sigmoid(linear_output)
 
         # Compute loss with given loss function
-        loss = Loss_function(y, predictions)
-        loss_list.append(loss)
-        # Do a optimization step with given method
-        weights, bias, loss = optimization_method(X, y, predictions, weights, bias, learning_rate, minibatch_size = 32,
-                                             hessian_function = logistic_loss_hessian, gradient_function = logistic_loss_gradient, Loss_function = Loss_function, M=0.02)
+        #loss = Loss_function(weights, X, y, lambd, alpha)
         
+        # Do a optimization step with given method
+        weights, loss = optimization_method(X, y, weights, learning_rate, minibatch_size = 1000,
+                                             hessian_function = logistic_loss_hessian, gradient_function = logistic_loss_gradient, Loss_function = Loss_function, M=0.02, lambd=0.001, alpha=1)
+        
+        loss_list.append(loss)
         # Compute accuracy
-        accuracy = compute_accuracy(X, y, weights, bias)
+        accuracy = compute_accuracy(X, y, weights)
         accuracy_list.append(accuracy)
         
         # Print accuracy 10 times
         if epoch == 0 or (epoch + 1) % (epochs // 10) == 0 or epoch == epochs - 1:
             print(f'Epoch {epoch+1}/{epochs}, Loss: {loss.item()}, Accuracy: {accuracy:.4f}')
         
-    return weights, bias, accuracy_list, loss_list
+    return weights, accuracy_list, loss_list
 
 # Accuracy computation
-def compute_accuracy(X, y, weights, bias):
-    linear_output = np.dot(X, weights) + bias
+def compute_accuracy(X, y, weights):
+    linear_output = np.dot(X, weights)
     predictions = sigmoid(linear_output)
     predicted_labels = np.zeros(predictions.shape[0])
     for i in range(predictions.shape[0]):
@@ -251,8 +285,8 @@ def main():
     X_train, X_test, y_train, y_test = load_a9a()
     learning_rate = 1
     epochs = 1000
-    #optimization_method = stochastic_newton
-    optimization_method = stochastic_cubic_newton
+    #choose from = stochastic_newton, stochastic_cubic_newton
+    optimization_method = stochastic_newton
 
 
     print(f'size Xtrain: {X_train.shape}')
@@ -260,7 +294,7 @@ def main():
     print(f'size Xtest: {X_test.shape}')
     print(f'size yTest: {y_test.shape}')
     print(f"Start Training with Learning Rate: {learning_rate} ...")
-    weights, bias, accuracy_list, loss_list = optimization(X_train, y_train, optimization_method, binary_cross_entropy_loss, learning_rate, epochs)
+    weights, accuracy_list, loss_list = optimization(X_train, y_train, optimization_method, regularized_loss, learning_rate, epochs)
 
 
     #print("Starting Test...")
