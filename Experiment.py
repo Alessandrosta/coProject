@@ -236,6 +236,8 @@ def cubic_gradient(g, H, w, alpha, M):
 
 
 def optimization(X, y, optimization_method, Loss_function, learning_rate=0.01, epochs=1000, tolerance=1e-6):
+    # Start measuring time
+    start_time = time.time()
     m, n = X.shape
     weights = np.ones((n, 1))*0.1
     #bias = np.zeros((1, 1))
@@ -263,10 +265,22 @@ def optimization(X, y, optimization_method, Loss_function, learning_rate=0.01, e
         accuracy = compute_accuracy(X, y, weights)
         accuracy_list.append(accuracy)
         
+        # Measure time for the first 10 epochs
+        if epoch == 9:  # epoch is zero-indexed, so this checks after 10 iterations
+            end_time_first_10 = time.time()
+            time_first_10_iterations = end_time_first_10 - start_time
+            # Estimate time for all epochs
+            expected_total_time = time_first_10_iterations / 10 * epochs
+            
+            # Print out the measured time and expected total time
+            print(f"Time for the first 10 epochs: {time_first_10_iterations:.4f} seconds")
+            print(f"Expected total time for {epochs} epochs: {expected_total_time:.2f} seconds")
+
         # Print accuracy 10 times
         if epoch == 0 or (epoch + 1) % (epochs // 10) == 0 or epoch == epochs - 1:
             print(f'Epoch {epoch+1}/{epochs}, Loss: {loss.item()}, Accuracy: {accuracy:.4f}')
-        
+    end_time = time.time() - start_time
+    print(f'total time: {end_time:.2f} seconds')    
     return weights, accuracy_list, loss_list
 
 # Accuracy computation
@@ -283,25 +297,23 @@ def compute_accuracy(X, y, weights):
 # Main function
 def main():
     X_train, X_test, y_train, y_test = load_a9a()
-    learning_rate = 1
-    epochs = 1000
-    #choose from = stochastic_newton, stochastic_cubic_newton
+    learning_rate = 0.5
+    epochs = 200
     optimization_method = stochastic_newton
-
+    epsilon = 1e-15
+    minibatch_size = 50000
 
     print(f'size Xtrain: {X_train.shape}')
     print(f'size ytrain: {y_train.shape}')
     print(f'size Xtest: {X_test.shape}')
     print(f'size yTest: {y_test.shape}')
     print(f"Start Training with Learning Rate: {learning_rate} ...")
-    weights, accuracy_list, loss_list = optimization(X_train, y_train, optimization_method, regularized_loss, learning_rate, epochs)
-
+    weights, accuracy_list, loss_list = optimization(X_train, y_train, optimization_method, binary_cross_entropy_loss, learning_rate, epochs, minibatch_size)
 
     #print("Starting Test...")
     # Test accuracy
     #test_accuracy = compute_accuracy(X_test, y_test, weights, bias)
     #print(f'Test Accuracy: {test_accuracy:.4f}')
-    
     # Plotting accuracy vs iterations
     plt.plot(accuracy_list)
     plt.xlabel('Iterations')
@@ -309,19 +321,14 @@ def main():
     plt.title(f'Accuracy vs Iterations for {optimization_method.__name__}')
     plt.savefig('accuracy_plot.png')  # Save plot as PNG file
     plt.close()  # Close the plot window
-
     print("Finished Training")
-
 
 
     # Compute f^* (the best loss observed)
     f_star = min(loss_list)
-
     # Compute f(x^k) - f^* for each epoch
     fxk_minus_f_star = [loss - f_star for loss in loss_list]
-
     # Add a small epsilon value to avoid log(0)
-    epsilon = 1e-5
     fxk_minus_f_star = [loss + epsilon for loss in fxk_minus_f_star]
 
     # Plotting
@@ -333,7 +340,6 @@ def main():
     plt.title(f'Convergence of {optimization_method.__name__}')
     plt.legend()
     plt.grid(True)
-
     # Save the plot as an image file
     plt.savefig('plotfk_fstar.png')
 
