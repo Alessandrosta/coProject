@@ -151,8 +151,8 @@ def stochastic_newton(X,y, weights, learning_rate, minibatch_size, hessian_funct
         y_batch = y[batch]
     
     # calculate xk+1
-    Hk = hessian_function(weights, X_batch, y_batch)
-    gk = gradient_function(weights, X_batch, y_batch)
+    Hk = hessian_function(weights, X_batch, y_batch, lambd, alpha)
+    gk = gradient_function(weights, X_batch, y_batch, lambd, alpha)
 
     loss = 1000
     #update only if successful
@@ -185,8 +185,8 @@ def stochastic_cubic_newton(X,y, weights, learning_rate, minibatch_size, hessian
         y_batch = y[batch]    
 
     # calculate xk+1
-    Hk = hessian_function(weights, X_batch, y_batch)
-    gk = gradient_function(weights, X_batch, y_batch)
+    Hk = hessian_function(weights, X_batch, y_batch, lambd, alpha)
+    gk = gradient_function(weights, X_batch, y_batch, lambd, alpha)
     
 
     loss = 1000
@@ -256,7 +256,7 @@ def optimization(X, y, optimization_method, Loss_function, learning_rate=0.01, e
         
         # Do a optimization step with given method
         weights, loss = optimization_method(X, y, weights, learning_rate, minibatch_size = 1000,
-                                             hessian_function = logistic_loss_hessian, gradient_function = logistic_loss_gradient, Loss_function = Loss_function, M=0.02, lambd=0.001, alpha=1)
+                                             hessian_function = reg_loss_hessian, gradient_function = reg_loss_gradient, Loss_function = Loss_function, M=0.02, lambd=0.001, alpha=1)
         
         loss_list.append(loss)
         # Compute accuracy
