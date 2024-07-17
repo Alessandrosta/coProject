@@ -9,7 +9,7 @@ import time
 import os
 import mathFunctions
 
-
+    
 def stochastic_newton(X,y, weights, learning_rate, minibatch_size, hessian_function, gradient_function, Loss_function, M, lambd, alpha):
     # choose batch
     if minibatch_size >= X.shape[0]:
