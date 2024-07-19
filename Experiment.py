@@ -26,7 +26,7 @@ def optimization(X, y, learning_rate, epochs, minibatch_size, functions, M=0.02,
     gradient_function = functions['gradient_function']
 
     m, n = X.shape
-    weights = np.zeros((n, 1))
+    weights = np.ones((n, 1))*0.001
     #bias = np.zeros((1, 1))
 
     #initialize lists
@@ -108,7 +108,7 @@ def average_optimization(repetition, input, SCR):
         avg_time_list = np.mean(all_time_lists, axis=0)
     
     elif SCR == True:
-        w = np.zeros(input['X'].shape[1])
+        w = np.ones(input['X'].shape[1])*0.001
         func = input['functions']
         loss = func['loss_function']
         gradient = func['gradient_function']
@@ -247,7 +247,7 @@ def compare_Methods(dataset_name, loss, repetitions, learning_rate, epochs, mini
             'time_list': time_list2
         },
         {
-            'name': 'Sub-sampled Regularised Cubic Newton',
+            'name': 'Sub-sampled Cubic Regularization',
             'accuracy_list': accuracy_list3,
             'loss_list': loss_list3,
             'time_list': time_list3
@@ -412,7 +412,7 @@ def compare_Losses(dataset_name, repetitions, learning_rate, epochs, minibatch_s
             'time_list': time_listSCNL
         },
         {
-            'name': 'SCN Regulariced',
+            'name': 'SCN Regularized',
             'accuracy_list': accuracy_listSCNLR,
             'loss_list': loss_listSCNLR,
             'time_list': time_listSCNLR
@@ -424,7 +424,7 @@ def compare_Losses(dataset_name, repetitions, learning_rate, epochs, minibatch_s
             'time_list': time_listSCRL
         },
         {
-            'name': 'SCR Regulariced',
+            'name': 'SCR Regularized',
             'accuracy_list': accuracy_listSCRLR,
             'loss_list': loss_listSCRLR,
             'time_list': time_listSCRLR
@@ -507,7 +507,7 @@ def compare_learningRates(dataset_name, loss, repetitions, learning_rate, epochs
             'gradient_function': mathFunctions.logistic_loss_gradient
         }
 
-    elif loss == 'Regularised logistic loss':
+    elif loss == 'Regularized logistic loss':
         functions = {
             'optimization_method': methods.stochastic_newton,
             'loss_function': mathFunctions.reg_loss,
