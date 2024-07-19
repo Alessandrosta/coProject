@@ -146,18 +146,21 @@ def compare_Methods(dataset_name, loss, repetitions, learning_rate, epochs, mini
         print('Invalid Dataset choice! Choose between: a9a, ijcnn1 .')
         
     if loss == 'Logistic loss':
+        ## SN
         functions1 = {
             'optimization_method': methods.stochastic_newton,
             'loss_function': mathFunctions.binary_cross_entropy_loss,
             'hessian_function': mathFunctions.logistic_loss_hessian,
             'gradient_function': mathFunctions.logistic_loss_gradient
         }
+        ## SCN
         functions2 = {
             'optimization_method': methods.stochastic_cubic_newton,
             'loss_function': mathFunctions.binary_cross_entropy_loss,
             'hessian_function': mathFunctions.logistic_loss_hessian,
             'gradient_function': mathFunctions.logistic_loss_gradient
         }
+        ## SCR
         functions3 = {
             
             'loss_function': mathFunctions.logistic_loss_v2,
@@ -167,18 +170,21 @@ def compare_Methods(dataset_name, loss, repetitions, learning_rate, epochs, mini
         }
 
     elif loss == 'Regularised logistic loss':
+        ## SN
         functions1 = {
             'optimization_method': methods.stochastic_newton,
             'loss_function': mathFunctions.reg_loss,
             'hessian_function': mathFunctions.reg_loss_hessian,
             'gradient_function': mathFunctions.reg_loss_gradient
         }
+        ## SCN
         functions2 = {
             'optimization_method': methods.stochastic_cubic_newton,
             'loss_function': mathFunctions.reg_loss,
             'hessian_function': mathFunctions.reg_loss_hessian,
             'gradient_function': mathFunctions.reg_loss_gradient
         }
+        ## SCR
         functions3 = {
             
             'loss_function': mathFunctions.logistic_loss_nonconvex,
